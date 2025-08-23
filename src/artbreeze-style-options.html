@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>浮声 TaBient</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      width: 320px;
+      min-height: 400px;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      background: linear-gradient(135deg, #ffffff, #fafafa);
+      color: #2c3e50;
+      border: none;
+      outline: none;
+      overflow-x: hidden;
+    }
+
+    .header {
+      background: linear-gradient(135deg, #ffffff, #f5f5f5);
+      color: #2c3e50;
+      padding: 24px 20px;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+      border-bottom: 1px solid rgba(44, 62, 80, 0.08);
+    }
+
+    .header::before {
+      content: '';
+      position: absolute;
+      top: -50%;
+      left: -50%;
+      width: 200%;
+      height: 200%;
+      background: radial-gradient(circle, rgba(52, 152, 219, 0.03) 1px, transparent 1px);
+      background-size: 20px 20px;
+      animation: float 20s infinite linear;
+    }
+
+    @keyframes float {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    .logo {
+      font-size: 22px;
+      font-weight: 700;
+      margin-bottom: 6px;
+      position: relative;
+      z-index: 1;
+      color: #2c3e50;
+      letter-spacing: -0.5px;
+    }
+
+    .subtitle {
+      font-size: 12px;
+      opacity: 0.7;
+      position: relative;
+      z-index: 1;
+      color: #5a6c7d;
+      letter-spacing: 0.5px;
+    }
+
+    .content {
+      padding: 20px;
+      background: #ffffff;
+    }
+
+    .control-group {
+      background: linear-gradient(135deg, #ffffff, #fafafa);
+      border-radius: 12px;
+      padding: 16px;
+      box-shadow: 
+        0 2px 8px rgba(0, 0, 0, 0.06),
+        0 1px 3px rgba(0, 0, 0, 0.04);
+      margin-bottom: 12px;
+      border: 1px solid rgba(44, 62, 80, 0.06);
+      transition: all 0.3s ease;
+    }
+
+    .control-group:hover {
+      box-shadow: 
+        0 4px 12px rgba(0, 0, 0, 0.08),
+        0 2px 4px rgba(0, 0, 0, 0.06);
+    }
+
+    .control-label {
+      font-size: 13px;
+      font-weight: 600;
+      margin-bottom: 12px;
+      color: #2c3e50;
+      display: block;
+    }
+
+    .toggle-switch {
+      position: relative;
+      display: inline-block;
+      width: 48px;
+      height: 24px;
+      margin-left: auto;
+    }
+
+    .toggle-switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: #ddd;
+      transition: .4s;
+      border-radius: 24px;
+      box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.2);
+    }
+
+    .slider:before {
+      position: absolute;
+      content: "";
+      height: 18px;
+      width: 18px;
+      left: 3px;
+      bottom: 3px;
+      background-color: white;
+      transition: .4s;
+      border-radius: 50%;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    }
+
+    input:checked + .slider {
+      background-color: #3498db;
+    }
+
+    input:checked + .slider:before {
+      transform: translateX(24px);
+    }
+
+    .slider-container {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .slider-container input[type="range"] {
+      flex: 1;
+      height: 6px;
+      border-radius: 3px;
+      background: #e0e6ed;
+      outline: none;
+      -webkit-appearance: none;
+      cursor: pointer;
+    }
+
+    .slider-container input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: #3498db;
+      cursor: pointer;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+      transition: all 0.2s ease;
+    }
+
+    .slider-container input[type="range"]::-webkit-slider-thumb:hover {
+      transform: scale(1.2);
+    }
+
+    .slider-container input[type="range"]::-moz-range-thumb {
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: #3498db;
+      cursor: pointer;
+      border: none;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    }
+
+    .value-display {
+      font-size: 12px;
+      color: #5a6c7d;
+      min-width: 45px;
+      text-align: right;
+      font-weight: 500;
+    }
+
+    select {
+      width: 100%;
+      padding: 8px 12px;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      font-size: 13px;
+      background: white;
+      color: #2c3e50;
+      cursor: pointer;
+      transition: border-color 0.3s ease;
+    }
+
+    select:focus {
+      outline: none;
+      border-color: #3498db;
+    }
+
+    .preset-buttons {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    .preset-btn {
+      padding: 8px 12px;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      background: white;
+      color: #5a6c7d;
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      text-align: center;
+    }
+
+    .preset-btn:hover {
+      border-color: #3498db;
+      color: #3498db;
+      background: #f8fbff;
+    }
+
+    .preset-btn.active {
+      background: #3498db;
+      color: white;
+      border-color: #3498db;
+    }
+
+    .action-buttons {
+      display: flex;
+      gap: 8px;
+      margin-top: 16px;
+    }
+
+    .btn {
+      flex: 1;
+      padding: 10px 16px;
+      border: none;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      text-align: center;
+    }
+
+    .btn-primary {
+      background: #3498db;
+      color: white;
+    }
+
+    .btn-primary:hover {
+      background: #2980b9;
+      transform: translateY(-1px);
+    }
+
+    .btn-secondary {
+      background: #ecf0f1;
+      color: #5a6c7d;
+      border: 1px solid #ddd;
+    }
+
+    .btn-secondary:hover {
+      background: #d5dbdb;
+      color: #2c3e50;
+    }
+
+    .status-display {
+      margin-top: 16px;
+      padding: 12px;
+      background: linear-gradient(135deg, #f8fbff, #e8f4fd);
+      border-radius: 8px;
+      border-left: 4px solid #3498db;
+      font-size: 12px;
+      color: #2c3e50;
+      line-height: 1.4;
+    }
+
+    .footer {
+      text-align: center;
+      padding: 16px 20px;
+      font-size: 11px;
+      color: #95a5a6;
+      border-top: 1px solid rgba(44, 62, 80, 0.08);
+      background: linear-gradient(135deg, #fafafa, #f5f5f5);
+    }
+
+    .control-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+    }
+
+    .control-row:last-child {
+      margin-bottom: 0;
+    }
+
+    .section-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: #3498db;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .section-title::before {
+      content: '';
+      width: 4px;
+      height: 16px;
+      background: #3498db;
+      border-radius: 2px;
+    }
+
+    /* 深色模式支持 */
+    body.dark-mode {
+      background: linear-gradient(135deg, #1a1a1a, #2a2a2a);
+      color: #ecf0f1;
+    }
+
+    body.dark-mode .header {
+      background: linear-gradient(135deg, #2a2a2a, #1f1f1f);
+      color: #ecf0f1;
+      border-bottom-color: rgba(255, 255, 255, 0.1);
+    }
+
+    body.dark-mode .subtitle {
+      color: #bdc3c7;
+    }
+
+    body.dark-mode .content {
+      background: #1a1a1a;
+    }
+
+    body.dark-mode .control-group {
+      background: linear-gradient(135deg, #2a2a2a, #1f1f1f);
+      border-color: rgba(255, 255, 255, 0.1);
+      box-shadow: 
+        0 2px 8px rgba(0, 0, 0, 0.3),
+        0 1px 3px rgba(0, 0, 0, 0.2);
+    }
+
+    body.dark-mode .control-label {
+      color: #ecf0f1;
+    }
+
+    body.dark-mode .slider {
+      background-color: #444;
+    }
+
+    body.dark-mode input:checked + .slider {
+      background-color: #5dade2;
+    }
+
+    body.dark-mode .slider-container input[type="range"] {
+      background: #444;
+    }
+
+    body.dark-mode .slider-container input[type="range"]::-webkit-slider-thumb {
+      background: #5dade2;
+    }
+
+    body.dark-mode .value-display {
+      color: #bdc3c7;
+    }
+
+    body.dark-mode select {
+      background: #2a2a2a;
+      color: #ecf0f1;
+      border-color: #555;
+    }
+
+    body.dark-mode .preset-btn {
+      background: #2a2a2a;
+      color: #bdc3c7;
+      border-color: #555;
+    }
+
+    body.dark-mode .preset-btn:hover {
+      background: #34495e;
+      color: #ecf0f1;
+      border-color: #5dade2;
+    }
+
+    body.dark-mode .btn-secondary {
+      background: #34495e;
+      color: #bdc3c7;
+      border-color: #555;
+    }
+
+    body.dark-mode .btn-secondary:hover {
+      background: #4a5f7a;
+      color: #ecf0f1;
+    }
+
+    body.dark-mode .status-display {
+      background: linear-gradient(135deg, #1f2933, #16222a);
+      border-left-color: #5dade2;
+      color: #bdc3c7;
+    }
+
+    body.dark-mode .footer {
+      background: linear-gradient(135deg, #1f1f1f, #1a1a1a);
+      color: #7f8c8d;
+      border-top-color: rgba(255, 255, 255, 0.1);
+    }
+
+    body.dark-mode .section-title {
+      color: #5dade2;
+    }
+
+    /* 动画效果 */
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .control-group {
+      animation: fadeIn 0.5s ease forwards;
+    }
+
+    .control-group:nth-child(1) { animation-delay: 0.1s; }
+    .control-group:nth-child(2) { animation-delay: 0.2s; }
+    .control-group:nth-child(3) { animation-delay: 0.3s; }
+    .control-group:nth-child(4) { animation-delay: 0.4s; }
+
+    /* 响应式设计 */
+    @media (max-width: 300px) {
+      body {
+        width: 280px;
+      }
+      
+      .preset-buttons {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="logo">🎵 浮声 TaBient</div>
+    <div class="subtitle">让标签切换充满音乐感</div>
+  </div>
+
+  <div class="content">
+    <!-- 基础设置 -->
+    <div class="control-group">
+      <div class="control-row">
+        <span class="control-label">启用音效</span>
+        <label class="toggle-switch">
+          <input type="checkbox" id="enabledToggle" checked>
+          <span class="slider"></span>
+        </label>
+      </div>
+    </div>
+
+    <!-- 音量控制 -->
+    <div class="control-group">
+      <div class="section-title">基础设置</div>
+      <div class="slider-container">
+        <span class="control-label">主音量</span>
+        <input type="range" id="volumeSlider" min="0" max="100" value="70">
+        <span class="value-display" id="volumeValue">70%</span>
+      </div>
+      <div class="slider-container">
+        <span class="control-label">强度</span>
+        <input type="range" id="intensitySlider" min="0" max="100" value="80">
+        <span class="value-display" id="intensityValue">80%</span>
+      </div>
+            <div class="control-row">
+        <span class="control-label">音阶</span>
+        <select id="scaleSelect">
+          <option value="pentatonic">五声音阶</option>
+          <option value="major">大调音阶</option>
+          <option value="minor">小调音阶</option>
+          <option value="ambient">环境音阶</option>
+        </select>
+      </div>
+      
+      <div class="control-row">
+        <span class="control-label">音色</span>
+        <select id="timbreSelect">
+          <option value="sine">正弦波</option>
+          <option value="triangle">三角波</option>
+          <option value="square">方波</option>
+          <option value="sawtooth">锯齿波</option>
+          <option value="acoustic-grand">钢琴</option>
+          <option value="electric-guitar">电吉他</option>
+          <option value="bell">铃声</option>
+        </select>
+      </div>
+      
+      <div class="control-row">
+        <span class="control-label">连击旋律</span>
+        <select id="comboPatternSelect">
+          <option value="scale-up">上行音阶</option>
+          <option value="scale-down">下行音阶</option>
+          <option value="arpeggio">琶音</option>
+          <option value="chord">和弦</option>
+          <option value="melody">小星星旋律</option>
+          <option value="fanfare">号角声</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- 音频效果 -->
+    <div class="control-group">
+      <div class="section-title">音频效果</div>
+      <div class="slider-container">
+        <span class="control-label">混响强度</span>
+        <input type="range" id="reverbWetSlider" min="0" max="100" value="25">
+        <span class="value-display" id="reverbWetValue">25%</span>
+      </div>
+      <div class="slider-container">
+        <span class="control-label">延时强度</span>
+        <input type="range" id="delayWetSlider" min="0" max="100" value="18">
+        <span class="value-display" id="delayWetValue">18%</span>
+      </div>
+      <div class="slider-container">
+        <span class="control-label">延时时间</span>
+        <input type="range" id="delayTimeSlider" min="0.1" max="1.0" step="0.1" value="0.3">
+        <span class="value-display" id="delayTimeValue">0.3s</span>
+      </div>
+      <div class="slider-container">
+        <span class="control-label">延时反馈</span>
+        <input type="range" id="delayFeedbackSlider" min="0" max="90" value="30">
+        <span class="value-display" id="delayFeedbackValue">30%</span>
+      </div>
+    </div>
+
+    <!-- 预设 -->
+    <div class="control-group">
+      <div class="section-title">预设方案</div>
+      <div class="preset-buttons">
+        <button class="preset-btn" data-preset="subtle">轻柔</button>
+        <button class="preset-btn" data-preset="balanced">平衡</button>
+        <button class="preset-btn" data-preset="dramatic">戏剧</button>
+        <button class="preset-btn" data-preset="ambient">环境</button>
+      </div>
+    </div>
+
+    
+    <!-- 状态显示 -->
+    <div class="status-display" id="statusDisplay">
+      音频引擎: 初始化中...
+    </div>
+  </div>
+
+  <div class="footer">
+    <div>TaBient v1.0.0</div>
+    <div>让每一次切换都充满韵律</div>
+  </div>
+
+  <script src="options/options.js"></script>
+</body>
+</html>

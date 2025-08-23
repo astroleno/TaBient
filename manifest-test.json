@@ -1,0 +1,28 @@
+{
+  "manifest_version": 3,
+  "name": "TaBient Audio Test",
+  "version": "1.0.0",
+  "description": "测试基础音频功能",
+  "permissions": [
+    "tabs",
+    "storage",
+    "offscreen"
+  ],
+  "host_permissions": [
+    "<all_urls>"
+  ],
+  "background": {
+    "service_worker": "background-test.js",
+    "type": "module"
+  },
+  "action": {
+    "default_popup": "options/options.html",
+    "default_title": "音频测试"
+  },
+  "options_page": "options/options.html",
+  "icons": {
+    "16": "assets/icon16.png",
+    "48": "assets/icon48.png",
+    "128": "assets/icon128.png"
+  }
+}

@@ -1,0 +1,26 @@
+{
+  "name": "tabient",
+  "version": "1.0.0",
+  "description": "一个让 Chrome 标签切换时有氛围音效的小插件",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build && node copy-static-files.js",
+    "preview": "vite preview",
+    "postinstall": "npm run build"
+  },
+  "keywords": [
+    "chrome-extension",
+    "tab-switch",
+    "sound-effects",
+    "ambient-sounds"
+  ],
+  "author": "TaBient Team",
+  "license": "MIT",
+  "devDependencies": {
+    "vite": "^5.0.0"
+  },
+  "dependencies": {
+    "tone": "^14.7.77"
+  }
+}
