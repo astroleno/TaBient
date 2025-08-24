@@ -12,7 +12,7 @@
     }
 
     body {
-      width: 320px;
+      width: 360px;
       min-height: 400px;
       margin: 0;
       padding: 0;
@@ -94,11 +94,14 @@
     }
 
     .control-label {
-      font-size: 13px;
+      font-size: 12px;
       font-weight: 600;
       margin-bottom: 12px;
       color: #2c3e50;
       display: block;
+      white-space: nowrap;
+      min-width: fit-content;
+      word-break: keep-all;
     }
 
     .toggle-switch {
@@ -152,7 +155,7 @@
     .slider-container {
       display: flex;
       align-items: center;
-      gap: 12px;
+      gap: 10px;
     }
 
     .slider-container input[type="range"] {
@@ -192,9 +195,9 @@
     }
 
     .value-display {
-      font-size: 12px;
+      font-size: 11px;
       color: #5a6c7d;
-      min-width: 45px;
+      min-width: 40px;
       text-align: right;
       font-weight: 500;
     }
@@ -204,11 +207,15 @@
       padding: 8px 12px;
       border: 1px solid #ddd;
       border-radius: 6px;
-      font-size: 13px;
+      font-size: 12px;
       background: white;
       color: #2c3e50;
       cursor: pointer;
       transition: border-color 0.3s ease;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      overflow: hidden;
+      word-break: keep-all;
     }
 
     select:focus {
@@ -224,12 +231,12 @@
     }
 
     .preset-btn {
-      padding: 8px 12px;
+      padding: 7px 10px;
       border: 1px solid #ddd;
       border-radius: 6px;
       background: white;
       color: #5a6c7d;
-      font-size: 12px;
+      font-size: 11px;
       font-weight: 500;
       cursor: pointer;
       transition: all 0.3s ease;
@@ -312,6 +319,7 @@
       align-items: center;
       justify-content: space-between;
       margin-bottom: 12px;
+      min-height: 36px;
     }
 
     .control-row:last-child {
@@ -442,25 +450,176 @@
     .control-group {
       animation: fadeIn 0.5s ease forwards;
     }
+    
+    .blacklist-container {
+      display: flex;
+      align-items: center;
+      margin-top: 8px;
+    }
+    
+    .blacklist-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 6px 10px;
+      margin: 4px 0;
+      background: #f8f9fa;
+      border: 1px solid #e9ecef;
+      border-radius: 4px;
+      font-size: 11px;
+    }
+    
+    .blacklist-item button {
+      background: #dc3545;
+      color: white;
+      border: none;
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-size: 10px;
+      cursor: pointer;
+    }
+    
+    body.dark-mode .blacklist-item {
+      background: #34495e;
+      border-color: #555;
+      color: #ecf0f1;
+    }
 
     .control-group:nth-child(1) { animation-delay: 0.1s; }
     .control-group:nth-child(2) { animation-delay: 0.2s; }
     .control-group:nth-child(3) { animation-delay: 0.3s; }
     .control-group:nth-child(4) { animation-delay: 0.4s; }
 
+    /* Safari样式滚动导航栏 */
+    .scroll-nav {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(20px);
+      border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+      padding: 8px 16px;
+      z-index: 1000;
+      transform: translateY(-100%);
+      transition: transform 0.3s ease;
+    }
+    
+    .scroll-nav.visible {
+      transform: translateY(0);
+    }
+    
+    .scroll-nav-items {
+      display: flex;
+      overflow-x: auto;
+      gap: 16px;
+      scrollbar-width: none;
+      -ms-overflow-style: none;
+    }
+    
+    .scroll-nav-items::-webkit-scrollbar {
+      display: none;
+    }
+    
+    .scroll-nav-item {
+      flex-shrink: 0;
+      font-size: 12px;
+      font-weight: 500;
+      color: #5a6c7d;
+      cursor: pointer;
+      padding: 4px 8px;
+      border-radius: 4px;
+      transition: all 0.2s ease;
+      white-space: nowrap;
+    }
+    
+    .scroll-nav-item:hover {
+      background: rgba(52, 152, 219, 0.1);
+      color: #3498db;
+    }
+    
+    .scroll-nav-item.active {
+      background: #3498db;
+      color: white;
+    }
+    
+    /* 深色模式导航栏 */
+    body.dark-mode .scroll-nav {
+      background: rgba(42, 42, 42, 0.95);
+      border-bottom-color: rgba(255, 255, 255, 0.1);
+    }
+    
+    body.dark-mode .scroll-nav-item {
+      color: #bdc3c7;
+    }
+    
+    body.dark-mode .scroll-nav-item:hover {
+      background: rgba(93, 173, 226, 0.2);
+      color: #5dade2;
+    }
+    
+    body.dark-mode .scroll-nav-item.active {
+      background: #5dade2;
+      color: #2c3e50;
+    }
+
     /* 响应式设计 */
-    @media (max-width: 300px) {
+    @media (max-width: 340px) {
       body {
-        width: 280px;
+        width: 320px;
       }
       
       .preset-buttons {
         grid-template-columns: 1fr;
       }
+      
+      .control-row {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 8px;
+      }
+      
+      .control-label {
+        font-size: 11px;
+        margin-bottom: 4px;
+        text-align: center;
+      }
+      
+      select {
+        font-size: 11px;
+        padding: 6px 8px;
+      }
+    }
+    
+    @media (max-width: 360px) {
+      .slider-container {
+        flex-wrap: wrap;
+        justify-content: center;
+      }
+      
+      .control-label {
+        white-space: normal;
+        text-align: center;
+        width: 100%;
+        margin-bottom: 8px;
+      }
     }
   </style>
 </head>
 <body>
+  <!-- Safari样式滚动导航栏 -->
+  <div class="scroll-nav" id="scrollNav">
+    <div class="scroll-nav-items">
+      <div class="scroll-nav-item" data-target="basic-settings">基础设置</div>
+      <div class="scroll-nav-item" data-target="audio-effects">音频效果</div>
+      <div class="scroll-nav-item" data-target="presets">预设方案</div>
+      <div class="scroll-nav-item" data-target="website-management">网站管理</div>
+      <div class="scroll-nav-item" data-target="config-management">配置管理</div>
+      <div class="scroll-nav-item" data-target="test-management">测试管理</div>
+      <div class="scroll-nav-item" data-target="statistics">使用统计</div>
+    </div>
+  </div>
+
   <div class="header">
     <div class="logo">🎵 浮声 TaBient</div>
     <div class="subtitle">让标签切换充满音乐感</div>
@@ -479,7 +638,7 @@
     </div>
 
     <!-- 音量控制 -->
-    <div class="control-group">
+    <div class="control-group" id="basic-settings">
       <div class="section-title">基础设置</div>
       <div class="slider-container">
         <span class="control-label">主音量</span>
@@ -488,51 +647,52 @@
       </div>
       <div class="slider-container">
         <span class="control-label">强度</span>
-        <input type="range" id="intensitySlider" min="0" max="100" value="80">
-        <span class="value-display" id="intensityValue">80%</span>
+        <input type="range" id="intensitySlider" min="0" max="100" value="70">
+        <span class="value-display" id="intensityValue">70%</span>
       </div>
             <div class="control-row">
         <span class="control-label">音阶</span>
         <select id="scaleSelect">
-          <option value="pentatonic">五声音阶</option>
-          <option value="major">大调音阶</option>
-          <option value="minor">小调音阶</option>
-          <option value="ambient">环境音阶</option>
-          <option value="blues">布鲁斯音阶</option>
+          <option value="pentatonic">五声</option>
+          <option value="major">大调</option>
+          <option value="minor">小调</option>
+          <option value="ambient">环境</option>
+          <option value="blues">布鲁斯</option>
           <option value="harmonic">和声小调</option>
           <option value="melodic">旋律小调</option>
-          <option value="chromatic">半音阶</option>
+          <option value="chromatic">半音</option>
           <option value="pentatonic_minor">五声小调</option>
           <option value="pentatonic_major">五声大调</option>
-          <option value="dorian">多利亚调式</option>
-          <option value="mixolydian">混合利第亚</option>
-          <option value="lydian">利第亚调式</option>
-          <option value="phrygian">弗里吉亚</option>
-          <option value="locrian">洛克利亚</option>
-          <option value="whole_tone">全音阶</option>
-          <option value="diminished">减音阶</option>
-          <option value="augmented">增音阶</option>
-          <option value="acoustic">声学音阶</option>
-          <option value="hungarian">匈牙利音阶</option>
-          <option value="gypsy">吉普赛音阶</option>
-          <option value="arabic">阿拉伯音阶</option>
-          <option value="japanese">日本音阶</option>
-          <option value="chinese">中国音阶</option>
-          <option value="indian">印度音阶</option>
-          <option value="spanish">西班牙音阶</option>
+          <option value="dorian">多利亚</option>
+          <option value="mixolydian">混合利</option>
+          <option value="lydian">利第亚</option>
+          <option value="phrygian">弗里吉</option>
+          <option value="locrian">洛克利</option>
+          <option value="whole_tone">全音</option>
+          <option value="diminished">减音</option>
+          <option value="augmented">增音</option>
+          <option value="acoustic">声学</option>
+          <option value="hungarian">匈牙利</option>
+          <option value="gypsy">吉普赛</option>
+          <option value="arabic">阿拉伯</option>
+          <option value="japanese">日本</option>
+          <option value="chinese">中国</option>
+          <option value="indian">印度</option>
+          <option value="spanish">西班牙</option>
         </select>
       </div>
       
       <div class="control-row">
         <span class="control-label">音色</span>
         <select id="timbreSelect">
-          <option value="sine">正弦波</option>
-          <option value="triangle">三角波</option>
-          <option value="square">方波</option>
-          <option value="sawtooth">锯齿波</option>
-          <option value="acoustic-grand">钢琴</option>
-          <option value="electric-guitar">电吉他</option>
-          <option value="bell">铃声</option>
+          <option value="sine">清淡正弦</option>
+          <option value="triangle">温柔三角</option>
+          <option value="square">硬朗方波</option>
+          <option value="sawtooth">尖锐锯齿</option>
+          <option value="piano">传统钢琴</option>
+          <option value="guitar">电声吉他</option>
+          <option value="bell">清脆铃声</option>
+          <option value="organ">厚重管风琴</option>
         </select>
       </div>
       
@@ -541,40 +701,12 @@
         <select id="comboPatternSelect">
           <option value="scale-up">上行音阶</option>
           <option value="scale-down">下行音阶</option>
-          <option value="arpeggio">琶音</option>
-          <option value="chord">和弦</option>
-          <option value="melody">小星星旋律</option>
+          <option value="arpeggio">琶音和弦</option>
+          <option value="melody">小星星</option>
           <option value="fanfare">号角声</option>
-          <option value="cascade">瀑布</option>
-          <option value="wave">波浪</option>
-          <option value="staircase">楼梯</option>
-          <option value="jump">跳跃</option>
-          <option value="spiral">螺旋</option>
-          <option value="bounce">弹跳</option>
-          <option value="pulse">脉冲</option>
-          <option value="flutter">颤动</option>
-          <option value="dance">舞蹈</option>
-          <option value="climb">攀爬</option>
-          <option value="fall">下落</option>
-          <option value="zigzag">锯齿</option>
-          <option value="loop">循环</option>
-          <option value="burst">爆发</option>
-          <option value="gentle">轻柔</option>
-          <option value="sparkle">闪烁</option>
-          <option value="flow">流动</option>
-          <option value="rhythm">节奏</option>
-          <option value="melodic">旋律</option>
-          <option value="harmonic">和声</option>
-          <option value="dynamic">动感</option>
-          <option value="graceful">优雅</option>
-          <option value="energetic">活力</option>
-          <option value="mysterious">神秘</option>
-          <option value="peaceful">平静</option>
-          <option value="playful">俏皮</option>
-          <option value="serene">宁静</option>
-          <option value="vibrant">活力</option>
-          <option value="whimsical">奇想</option>
-          <option value="ethereal">空灵</option>
+          <option value="wave">波浪起伏</option>
+          <option value="jump">跳跃音程</option>
+          <option value="cascade">阶梯瓶音</option>
         </select>
       </div>
       
@@ -585,10 +717,18 @@
           <option value="completion">补完模式</option>
         </select>
       </div>
+      
+      <div class="control-row">
+        <span class="control-label">音高模式</span>
+        <select id="soundModeSelect">
+          <option value="random">随机模式</option>
+          <option value="piano">钢琴模式</option>
+        </select>
+      </div>
     </div>
 
     <!-- 音频效果 -->
-    <div class="control-group">
+    <div class="control-group" id="audio-effects">
       <div class="section-title">音频效果</div>
       <div class="slider-container">
         <span class="control-label">混响强度</span>
@@ -613,7 +753,7 @@
     </div>
 
     <!-- 预设 -->
-    <div class="control-group">
+    <div class="control-group" id="presets">
       <div class="section-title">预设方案</div>
       <div class="preset-buttons">
         <button class="preset-btn" data-preset="subtle">轻柔</button>
@@ -623,7 +763,62 @@
       </div>
     </div>
 
+    <!-- 网站管理 -->
+    <div class="control-group" id="website-management">
+      <div class="section-title">网站管理</div>
+      <div class="control-row">
+        <span class="control-label">网站黑名单</span>
+        <div class="blacklist-container">
+          <input type="text" id="blacklistInput" placeholder="输入网站域名（如：youtube.com）" style="flex: 1; padding: 6px; border: 1px solid #ddd; border-radius: 4px; font-size: 12px;">
+          <button class="btn btn-secondary" id="addBlacklistBtn" style="margin-left: 8px; padding: 6px 12px;">添加</button>
+        </div>
+      </div>
+      <div id="blacklistItems" style="margin-top: 8px; max-height: 120px; overflow-y: auto;"></div>
+    </div>
+
+    <!-- 配置管理 -->
+    <div class="control-group" id="config-management">
+      <div class="section-title">配置管理</div>
+      <div class="action-buttons">
+        <button class="btn btn-secondary" id="exportConfigBtn">📤 导出配置</button>
+        <button class="btn btn-secondary" id="importConfigBtn">📥 导入配置</button>
+      </div>
+      <input type="file" id="importFileInput" accept=".json" style="display: none;">
+    </div>
+
+    <!-- 测试和管理 -->
+    <div class="control-group" id="test-management">
+      <div class="section-title">测试和管理</div>
+      <div class="action-buttons">
+        <button class="btn btn-primary" id="testSoundBtn">🔊 测试音效</button>
+        <button class="btn btn-secondary" id="resetBtn">🔄 重置设置</button>
+      </div>
+    </div>
+
     
+    <!-- 统计信息 -->
+    <div class="control-group" id="statistics">
+      <div class="section-title">使用统计</div>
+      <div id="statisticsDisplay" style="font-size: 11px; line-height: 1.4;">
+        <div style="display: flex; justify-content: space-between; margin: 4px 0;">
+          <span>今日播放:</span>
+          <span id="todayCount">-</span>
+        </div>
+        <div style="display: flex; justify-content: space-between; margin: 4px 0;">
+          <span>总计播放:</span>
+          <span id="totalCount">-</span>
+        </div>
+        <div style="display: flex; justify-content: space-between; margin: 4px 0;">
+          <span>最爱音阶:</span>
+          <span id="favoriteScale">-</span>
+        </div>
+        <div style="display: flex; justify-content: space-between; margin: 4px 0;">
+          <span>最后播放:</span>
+          <span id="lastPlayTime">-</span>
+        </div>
+      </div>
+    </div>
+
     <!-- 状态显示 -->
     <div class="status-display" id="statusDisplay">
       音频引擎: 初始化中...

@@ -5,24 +5,15 @@
   "description": "一个让 Chrome 标签切换时有氛围音效的小插件",
   "permissions": [
     "tabs",
+    "tabGroups",
     "storage",
     "offscreen",
     "activeTab"
-  ],
-  "host_permissions": [
-    "<all_urls>"
   ],
   "background": {
     "service_worker": "background-bundle.js",
     "type": "module"
   },
-  "content_scripts": [
-    {
-      "matches": ["<all_urls>"],
-      "js": ["content-script.js"],
-      "run_at": "document_start"
-    }
-  ],
   "action": {
     "default_popup": "artbreeze-style-options.html",
     "default_title": "TaBient 设置"

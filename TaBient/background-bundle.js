@@ -1,4 +1,100 @@
-console.log("🎵 [TABIENT] Service Worker 启动");
+// 日志管理
+const LOG_LEVEL = 'ERROR'; // 'DEBUG', 'INFO', 'WARN', 'ERROR' - 生产环境只显示错误
+const logger = {
+  debug: (msg, ...args) => { if (LOG_LEVEL === 'DEBUG') console.log(`🔍 [DEBUG] ${msg}`, ...args); },
+  info: (msg, ...args) => { if (['DEBUG', 'INFO'].includes(LOG_LEVEL)) console.log(`ℹ️ [INFO] ${msg}`, ...args); },
+  warn: (msg, ...args) => { if (['DEBUG', 'INFO', 'WARN'].includes(LOG_LEVEL)) console.warn(`⚠️ [WARN] ${msg}`, ...args); },
+  error: (msg, ...args) => { console.error(`❌ [ERROR] ${msg}`, ...args); }
+};
+
+logger.info("🎵 [TABIENT] Service Worker 启动");
+
+// Service Worker 安装和启动事件
+chrome.runtime.onInstalled.addListener(() => {
+  logger.info("🎵 [TABIENT] 扩展已安装/更新");
+  initializeExtension();
+});
+
+chrome.runtime.onStartup.addListener(() => {
+  logger.info("🎵 [TABIENT] 浏览器启动");
+  initializeExtension();
+});
+
+// 统一的初始化函数
+async function initializeExtension() {
+  // 防止并发初始化
+  if (isInitializing) {
+    logger.debug("初始化已在进行中，跳过重复调用");
+    return;
+  }
+  
+  isInitializing = true;
+  
+  try {
+    logger.info("🎵 开始初始化扩展");
+    
+    // 安全地关闭现有的 offscreen document
+    try {
+      if (await chrome.offscreen.hasDocument()) {
+        logger.debug("关闭现有的 offscreen document");
+        await chrome.offscreen.closeDocument();
+        // 稍等片刻确保完全关闭
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
+    } catch (closeError) {
+      logger.warn("关闭现有 offscreen document 失败", closeError);
+    }
+    
+    // 创建新的 offscreen document
+    const created = await createOffscreenDocument();
+    if (created) {
+      offscreenReady = true;
+      logger.info("🎵 扩展初始化完成");
+    } else {
+      logger.error("扩展初始化失败：无法创建 offscreen document");
+      offscreenReady = false;
+    }
+  } catch (error) {
+    logger.error("扩展初始化异常", error);
+    offscreenReady = false;
+  } finally {
+    isInitializing = false;
+  }
+}
+
+// 初始化时加载统计数据并创建 offscreen document
+chrome.storage.local.get(['totalPlays', 'todayPlays', 'lastResetDate', 'scaleStats', 'lastPlayTime'], async (result) => {
+  totalPlays = result.totalPlays || 0;
+  todayPlays = result.todayPlays || 0;
+  lastResetDate = result.lastResetDate || new Date().toDateString();
+  scaleStats = result.scaleStats || {};
+  lastPlayTime = result.lastPlayTime || 0;
+  
+  // 检查是否需要重置今日计数
+  const today = new Date().toDateString();
+  if (lastResetDate !== today) {
+    todayPlays = 0;
+    lastResetDate = today;
+    chrome.storage.local.set({ todayPlays, lastResetDate });
+  }
+  
+  logger.debug("统计数据已加载", { totalPlays, todayPlays, scaleStats });
+  
+  // 初始化 offscreen document
+  await initializeExtension();
+  
+  // 加载用户配置
+  chrome.storage.local.get('tabientConfig', (configResult) => {
+    if (configResult.tabientConfig) {
+      config = { ...config, ...configResult.tabientConfig };
+      logger.info("🎵 用户配置已加载", config);
+    } else {
+      logger.info("🎵 使用默认配置");
+      // 保存默认配置
+      chrome.storage.local.set({ tabientConfig: config });
+    }
+  });
+});
 
 // 默认配置
 let config = {
@@ -16,6 +112,8 @@ let config = {
   scale: "pentatonic",
   waveform: "sine",
   timbre: "sine",
+  soundMode: "random", // "random" 或 "piano"
+  blacklist: [], // 网站黑名单
   comboEnabled: true,
   comboThreshold: 1000,
   comboPattern: "scale-up",
@@ -55,7 +153,13 @@ const scales = {
 // 统计信息
 let lastPlayTime = 0;
 let totalPlays = 0;
+let todayPlays = 0;
+let lastResetDate = new Date().toDateString();
+let scaleStats = {};
 let offscreenReady = false;
+
+// 初始化锁，防止并发初始化
+let isInitializing = false;
 
 // 连击系统
 let comboNotes = []; // 存储连击音符
@@ -66,21 +170,40 @@ const COMBO_THRESHOLD = 2000; // 2秒内算连击
 // 创建 Offscreen Document
 async function createOffscreenDocument() {
   try {
+    // 再次检查是否已存在（防止竞态条件）
     if (await chrome.offscreen.hasDocument()) {
-      console.log("📄 Offscreen document 已存在");
+      logger.debug("📄 Offscreen document 已存在");
       return true;
     }
 
-    console.log("📄 创建 offscreen document...");
+    logger.info("📄 创建 offscreen document...");
+    
+    const documentUrl = chrome.runtime.getURL("offscreen-audio.html");
+    logger.debug("offscreen document URL:", documentUrl);
+    
     await chrome.offscreen.createDocument({
-      url: chrome.runtime.getURL("offscreen-audio.html"),
+      url: documentUrl,
       reasons: ["AUDIO_PLAYBACK"],
       justification: "播放标签切换音效"
     });
-    console.log("✅ Offscreen document 创建成功");
-    return true;
+    
+    // 验证创建成功
+    const hasDoc = await chrome.offscreen.hasDocument();
+    if (hasDoc) {
+      logger.info("✅ Offscreen document 创建成功");
+      return true;
+    } else {
+      logger.error("❌ Offscreen document 创建后验证失败");
+      return false;
+    }
   } catch (error) {
-    console.error("❌ 创建 offscreen document 失败:", error);
+    logger.error("❌ 创建 offscreen document 失败:", error.message);
+    
+    // 特殊处理常见错误
+    if (error.message && error.message.includes("closed before fully loading")) {
+      logger.warn("检测到并发创建问题，稍后重试");
+    }
+    
     return false;
   }
 }
@@ -88,13 +211,36 @@ async function createOffscreenDocument() {
 // 发送消息到 offscreen document
 async function sendToOffscreen(message) {
   try {
-    // 直接发送消息，offscreen document 会监听
-    const response = await chrome.runtime.sendMessage(message);
+    // 简单检查offscreen document是否存在
+    if (!await chrome.offscreen.hasDocument()) {
+      logger.warn("Offscreen document 不存在，跳过音效播放");
+      return { success: true, skipped: true };
+    }
+
+    // 添加消息标识
+    const messageWithId = {
+      ...message,
+      timestamp: Date.now(),
+      from: 'background'
+    };
+
+    logger.debug("发送消息到 offscreen", messageWithId.type);
+    
+    // 发送消息，使用较短的超时时间
+    const response = await Promise.race([
+      chrome.runtime.sendMessage(messageWithId),
+      new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('消息发送超时')), 2000)
+      )
+    ]);
+    
+    logger.debug("收到 offscreen 响应", response);
     return response;
+    
   } catch (error) {
-    console.error("❌ 发送到 offscreen document 失败:", error);
-    // 即使失败也返回成功，避免阻塞功能
-    return { success: true };
+    logger.debug("发送到 offscreen document 失败", error.message);
+    // 不要重试，直接返回成功避免阻塞
+    return { success: true, skipped: true };
   }
 }
 
@@ -126,42 +272,15 @@ async function playTone(frequency = 440, duration = 0.3) {
 // 获取连击旋律
 function getComboPattern(patternName = 'scale-up') {
   const comboPatterns = {
-    'scale-up': [0, 1, 2, 3, 4],
-    'scale-down': [4, 3, 2, 1, 0],
-    'arpeggio': [0, 2, 4, 2, 0],
-    'chord': [0, 2, 4],
-    'melody': [0, 0, 4, 4, 5, 5, 4],
-    'fanfare': [0, 4, 7, 4, 0],
-    'cascade': [0, 2, 1, 3, 2, 4, 3, 5],
-    'wave': [0, 2, 4, 2, 0, 3, 1, 4],
-    'staircase': [0, 1, 0, 2, 1, 3, 2, 4],
-    'jump': [0, 3, 1, 4, 2, 5, 3, 6],
-    'spiral': [0, 1, 3, 2, 4, 6, 5, 7],
-    'bounce': [0, 4, 1, 5, 2, 6, 3, 7],
-    'pulse': [0, 2, 0, 3, 0, 4, 0, 5],
-    'flutter': [0, 1, 0, 2, 1, 3, 2, 4],
-    'dance': [0, 2, 4, 1, 3, 5, 2, 4],
-    'climb': [0, 1, 2, 1, 2, 3, 2, 3, 4],
-    'fall': [4, 3, 2, 3, 2, 1, 2, 1, 0],
-    'zigzag': [0, 3, 1, 4, 2, 5, 3, 6, 4],
-    'loop': [0, 1, 2, 3, 2, 1, 0, 1, 2],
-    'burst': [0, 4, 0, 3, 0, 2, 0, 1],
-    'gentle': [0, 1, 0, 1, 2, 1, 2, 3],
-    'sparkle': [0, 4, 2, 5, 3, 6, 4, 7],
-    'flow': [0, 2, 1, 3, 2, 4, 3, 5, 4],
-    'rhythm': [0, 0, 2, 2, 4, 4, 2, 2],
-    'melodic': [0, 2, 4, 3, 5, 4, 6, 5],
-    'harmonic': [0, 2, 4, 5, 4, 2, 0, 2],
-    'dynamic': [0, 1, 3, 5, 4, 2, 1, 3],
-    'graceful': [0, 2, 1, 3, 2, 4, 3, 5],
-    'energetic': [0, 3, 1, 4, 2, 5, 3, 6],
-    'mysterious': [0, 4, 1, 5, 2, 6, 3, 7],
-    'peaceful': [0, 1, 2, 1, 0, 1, 2, 3],
-    'playful': [0, 3, 0, 4, 0, 5, 0, 6],
-    'serene': [0, 2, 4, 2, 0, 2, 4, 2],
-    'vibrant': [0, 4, 2, 5, 3, 6, 4, 7],
-    'whimsical': [0, 1, 3, 2, 4, 3, 5, 4],
-    'ethereal': [0, 4, 2, 6, 3, 7, 4, 8]
+    // 经典旋律模式 - 区别明显的8种
+    'scale-up': [0, 1, 2, 3, 4, 5, 6, 7], // Do Re Mi Fa Sol La Si Do 上行音阶
+    'scale-down': [7, 6, 5, 4, 3, 2, 1, 0], // 下行音阶
+    'arpeggio': [0, 2, 4, 7, 4, 2, 0], // C大三和弦琶音
+    'melody': [0, 0, 4, 4, 5, 5, 4, 3, 3, 2, 2, 1, 1, 0], // 小星星旋律
+    'fanfare': [0, 4, 7, 9, 7, 4, 0], // 号角声
+    'wave': [0, 2, 1, 3, 2, 4, 3, 5, 4], // 波浪起伏
+    'jump': [0, 4, 1, 5, 2, 6, 3, 7], // 跳跃音程
+    'cascade': [0, 1, 0, 2, 1, 3, 2, 4, 3, 5] // 阶梯瓶音
   };
 
   const pattern = comboPatterns[patternName] || comboPatterns['scale-up'];
@@ -268,18 +387,115 @@ async function handleCombo(domain, frequency) {
   lastComboTime = currentTime;
 }
 
+// 添加音效模式设置
+let soundMode = 'random'; // 'random' 或 'piano'
+
 // 根据域名生成频率
-function getFrequencyForDomain(domain) {
+async function getFrequencyForDomain(domain, tab = null) {
   if (!domain) return scales[config.scale][0];
   
+  if (config.soundMode === 'piano') {
+    // 钢琴键盘模式：按照标签位置从左到右递增音高
+    return await getPianoModeFrequency(domain, tab);
+  } else {
+    // 随机模式：基于域名哈希
+    let hash = 0;
+    for (let i = 0; i < domain.length; i++) {
+      hash = ((hash << 5) - hash) + domain.charCodeAt(i);
+      hash |= 0; // 转换为32位整数
+    }
+    
+    const scale = scales[config.scale];
+    return scale[Math.abs(hash) % scale.length];
+  }
+}
+
+// 钢琴模式频率生成 - 基于标签页实际位置
+async function getPianoModeFrequency(domain, tab) {
+  const scale = scales[config.scale];
+  
+  try {
+    if (!tab || !tab.windowId) {
+      // 如果没有tab信息，回退到域名哈希模式
+      logger.debug("钢琴模式：缺少tab信息，使用域名哈希");
+      return getHashBasedFrequency(domain, scale);
+    }
+    
+    // 获取当前窗口的所有标签页
+    const tabs = await chrome.tabs.query({ windowId: tab.windowId });
+    
+    // 按index排序确保正确的从左到右顺序
+    tabs.sort((a, b) => a.index - b.index);
+    
+    // 找到当前标签页的位置
+    const tabIndex = tabs.findIndex(t => t.id === tab.id);
+    
+    if (tabIndex === -1) {
+      logger.warn("钢琴模式：无法找到标签位置，使用域名哈希");
+      return getHashBasedFrequency(domain, scale);
+    }
+    
+    // 计算音高：从左到右，低音到高音
+    const totalTabs = tabs.length;
+    const scaleLength = scale.length;
+    const octaves = 3; // 3个八度范围
+    const totalNotes = scaleLength * octaves;
+    
+    // 将标签位置映射到键盘位置
+    const keyPosition = Math.floor((tabIndex / Math.max(totalTabs - 1, 1)) * (totalNotes - 1));
+    
+    const octave = Math.floor(keyPosition / scaleLength);
+    const noteIndex = keyPosition % scaleLength;
+    
+    // 基础频率乘以八度倍数
+    const baseFreq = scale[noteIndex];
+    const frequency = baseFreq * Math.pow(2, octave);
+    
+    logger.debug(`钢琴模式: ${domain} -> 位置${tabIndex + 1}/${totalTabs} -> 键位${keyPosition} -> ${frequency.toFixed(2)}Hz`);
+    return frequency;
+    
+  } catch (error) {
+    logger.error("钢琴模式频率计算失败", error);
+    return getHashBasedFrequency(domain, scale);
+  }
+}
+
+// 基于域名哈希的频率计算（回退方案）
+function getHashBasedFrequency(domain, scale) {
   let hash = 0;
   for (let i = 0; i < domain.length; i++) {
     hash = ((hash << 5) - hash) + domain.charCodeAt(i);
-    hash |= 0; // 转换为32位整数
+    hash |= 0;
   }
   
-  const scale = scales[config.scale];
-  return scale[Math.abs(hash) % scale.length];
+  const scaleLength = scale.length;
+  const octaves = 2;
+  const totalNotes = scaleLength * octaves;
+  
+  const keyPosition = Math.abs(hash) % totalNotes;
+  const octave = Math.floor(keyPosition / scaleLength);
+  const noteIndex = keyPosition % scaleLength;
+  
+  const baseFreq = scale[noteIndex];
+  const frequency = baseFreq * Math.pow(2, octave);
+  
+  logger.debug(`哈希模式: ${domain} -> 键位${keyPosition} -> ${frequency.toFixed(2)}Hz`);
+  return frequency;
+}
+
+// 获取最爱音阶
+function getFavoriteScale() {
+  let maxCount = 0;
+  let favorite = 'pentatonic';
+  
+  for (const [scale, count] of Object.entries(scaleStats)) {
+    if (count > maxCount) {
+      maxCount = count;
+      favorite = scale;
+    }
+  }
+  
+  return favorite;
 }
 
 // 处理标签切换
@@ -289,11 +505,8 @@ chrome.tabs.onActivated.addListener(async (activeInfo) => {
   try {
     const tab = await chrome.tabs.get(activeInfo.tabId);
     
-    // 检查URL有效性
-    if (!tab.url || tab.url.startsWith('chrome://') || 
-        tab.url.startsWith('edge://') || tab.url.startsWith('about:')) {
-      return;
-    }
+    // 支持所有类型的tab（包括extensions、空白页等）
+    // 移除URL过滤，让所有tab都能触发音效
     
     const currentTime = Date.now();
     
@@ -305,14 +518,29 @@ chrome.tabs.onActivated.addListener(async (activeInfo) => {
     // 提取域名
     let domain = "";
     try {
-      domain = new URL(tab.url).hostname.replace('www.', '');
+      if (tab.url) {
+        domain = new URL(tab.url).hostname.replace('www.', '');
+      } else {
+        domain = "blank-page";
+      }
     } catch (error) {
-      console.log("🚫 [TABIENT] URL 解析失败:", tab.url);
+      // 对于chrome://、about:等内部页面，使用特殊域名
+      if (tab.url && (tab.url.startsWith('chrome://') || tab.url.startsWith('edge://') || tab.url.startsWith('about:'))) {
+        domain = tab.url.split('://')[1].split('/')[0] || "internal-page";
+      } else {
+        domain = "unknown-page";
+      }
+      logger.debug("使用特殊域名处理", { url: tab.url, domain });
+    }
+
+    // 检查黑名单
+    if (config.blacklist && config.blacklist.includes(domain)) {
+      logger.debug("网站在黑名单中，跳过音效", domain);
       return;
     }
     
-    // 计算频率和持续时间
-    const frequency = getFrequencyForDomain(domain);
+    // 计算频率和持续时间（传入tab对象用于钢琴模式）
+    const frequency = await getFrequencyForDomain(domain, tab);
     const duration = Math.min(0.8, 0.2 + config.intensity * 0.4);
     
     console.log("🎵 [TABIENT] 标签切换:", {
@@ -348,9 +576,97 @@ chrome.tabs.onActivated.addListener(async (activeInfo) => {
     }
     
   } catch (error) {
-    console.error("❌ [TABIENT] 处理标签切换失败:", error);
+    logger.error("处理标签切换失败", error);
   }
 });
+
+// 标签组事件监听
+if (chrome.tabGroups) {
+  chrome.tabGroups.onUpdated.addListener(async (group) => {
+    if (!config.enabled) return;
+    
+    console.log("🏷️ [TABIENT] 标签组更新:", { id: group.id, title: group.title, color: group.color });
+    
+    // 基于标签组颜色生成音效
+    const groupFrequency = getFrequencyForTabGroup(group.color, group.id);
+    const duration = Math.min(0.6, 0.15 + config.intensity * 0.3);
+    
+    // 检查连击逻辑
+    const currentTime = Date.now();
+    if (currentTime - lastComboTime < COMBO_THRESHOLD) {
+      await handleCombo(`group-${group.id}`, groupFrequency);
+    } else {
+      // 重置连击
+      comboNotes = [];
+      await playTone(groupFrequency, duration);
+    }
+    
+    lastComboTime = currentTime;
+    lastPlayTime = currentTime;
+    totalPlays++;
+    
+    // 更新今日统计
+    const today = new Date().toDateString();
+    if (lastResetDate !== today) {
+      todayPlays = 0;
+      lastResetDate = today;
+    }
+    todayPlays++;
+    
+    // 更新音阶统计
+    const currentScale = config.scale || 'pentatonic';
+    scaleStats[currentScale] = (scaleStats[currentScale] || 0) + 1;
+    
+    // 保存统计数据
+    chrome.storage.local.set({
+      totalPlays,
+      todayPlays,
+      lastResetDate,
+      scaleStats,
+      lastPlayTime
+    });
+  });
+
+  chrome.tabGroups.onCreated.addListener(async (group) => {
+    if (!config.enabled) return;
+    
+    console.log("🏷️ [TABIENT] 标签组创建:", { id: group.id, color: group.color });
+    
+    // 为新创建的标签组播放特殊音效
+    const createFrequency = getFrequencyForTabGroup(group.color, group.id);
+    const pattern = getComboPattern('fanfare'); // 使用号角声表示创建
+    
+    // 播放创建音效序列
+    for (let i = 0; i < Math.min(3, pattern.length); i++) {
+      setTimeout(() => {
+        playTone(pattern[i], 0.2);
+      }, i * 150);
+    }
+    
+    lastPlayTime = Date.now();
+    totalPlays++;
+  });
+}
+
+// 根据标签组颜色和ID生成频率
+function getFrequencyForTabGroup(color, groupId) {
+  const colorFrequencies = {
+    'grey': 220,      // A3
+    'blue': 261.63,   // C4
+    'red': 293.66,    // D4
+    'yellow': 329.63, // E4
+    'green': 349.23,  // F4
+    'pink': 392,      // G4
+    'purple': 440,    // A4
+    'cyan': 493.88,   // B4
+    'orange': 523.25  // C5
+  };
+  
+  // 基础频率 + 组ID的偏移
+  const baseFreq = colorFrequencies[color] || 440;
+  const offset = (groupId % 7) * 10; // 小幅度偏移
+  return baseFreq + offset;
+}
 
 // 消息处理
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
@@ -400,9 +716,23 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           offscreenReady: offscreenReady,
           config: config,
           lastPlay: lastPlayTime,
-          totalPlays: totalPlays
+          totalPlays: totalPlays,
+          todayPlays: todayPlays,
+          scaleStats: scaleStats,
+          favoriteScale: getFavoriteScale()
         };
         sendResponse({ success: true, status });
+        return false;
+        
+      case "getStatistics":
+        const statistics = {
+          totalPlays,
+          todayPlays,
+          lastPlayTime,
+          favoriteScale: getFavoriteScale(),
+          scaleStats
+        };
+        sendResponse({ success: true, statistics });
         return false;
         
       case "diagnose":
